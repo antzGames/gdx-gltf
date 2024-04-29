@@ -4,6 +4,11 @@ uniform sampler2D u_shadowTexture;
 uniform float u_shadowPCFOffset;
 varying vec3 v_shadowMapUv;
 
+// Antz new
+const int pcfCount = 3;
+const int pcfWidth = 2;
+const float totalTexels = (pcfCount *2.0 + 1.0) * (pcfCount *2.0 + 1.0);
+
 #ifdef numCSM
 
 uniform sampler2D u_csmSamplers[numCSM];
@@ -74,11 +79,19 @@ float getShadowness(vec2 offset)
 
 float getShadow()
 {
-	return (//getShadowness(vec2(0,0)) +
-			getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset)) +
-			getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset)) +
-			getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset)) +
-			getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset))) * 0.25;
+	float total = 0.0;
+	vec2 o;
+
+	for (int x = -pcfCount * pcfWidth; x <= pcfCount * pcfWidth; x += pcfWidth ){
+		for (int y = -pcfCount * pcfWidth; y < pcfCount * pcfWidth; y += pcfWidth ){
+			o = mod(floor(v_shadowMapUv.xy), 2.0); // simple dither
+			total += getShadowness(vec2(x*u_shadowPCFOffset, y*u_shadowPCFOffset) + o);
+		}
+	}
+
+	total /= totalTexels;
+
+	return total;
 }
 
 #endif
