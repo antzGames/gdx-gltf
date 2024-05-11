@@ -105,13 +105,13 @@ attribute vec4 a_color;
 #endif // colorFlag
 
 #ifdef normalFlag
-attribute vec3 a_normal;
-uniform mat3 u_normalMatrix;
-#ifdef tangentFlag
-varying mat3 v_TBN;
-#else
-varying vec3 v_normal;
-#endif
+	attribute vec3 a_normal;
+	uniform mat3 u_normalMatrix;
+	#ifdef tangentFlag
+		varying mat3 v_TBN;
+	#else
+		varying vec3 v_normal;
+	#endif
 #endif // normalFlag
 
 #ifdef tangentFlag
@@ -290,7 +290,8 @@ void main() {
 	gl_Position = u_projViewTrans * pos;
 	
 	#ifdef shadowMapFlag
-		vec4 spos = u_shadowMapProjViewTrans * pos;
+		vec4 spos = u_shadowMapProjViewTrans * pos; // orig
+		//vec4 spos = u_shadowMapProjViewTrans * pos + vec4(vec3(a_normal) * 1.0/2048.0 , 0.0);
 		v_shadowMapUv.xyz = (spos.xyz / spos.w) * 0.5 + 0.5;
 		v_shadowMapUv.z = min(v_shadowMapUv.z, 0.998);
 		#ifdef numCSM

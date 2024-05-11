@@ -4,11 +4,6 @@ uniform sampler2D u_shadowTexture;
 uniform float u_shadowPCFOffset;
 varying vec3 v_shadowMapUv;
 
-// Antz new
-const int pcfCount = 2;
-const int pcfWidth = 2;
-const int totalTexels = (pcfCount *2 + 1) * (pcfCount *2 + 1);
-
 #ifdef numCSM
 
 uniform sampler2D u_csmSamplers[numCSM];
@@ -77,26 +72,13 @@ float getShadowness(vec2 offset)
     return step(v_shadowMapUv.z, dot(texture2D(u_shadowTexture, v_shadowMapUv.xy + offset), bitShifts) + u_shadowBias); // (1.0/255.0)
 }
 
-float random(vec2 st)
-{
-	return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-}
-
 float getShadow()
 {
-	float total = 0.0;
-	float rand = random(v_shadowMapUv.xy);
-	vec2 dither = vec2(rand,rand) / 4096.0;
-
-	for (int x = -pcfCount * pcfWidth; x <= pcfCount * pcfWidth; x += pcfWidth ){
-		for (int y = -pcfCount * pcfWidth; y < pcfCount * pcfWidth; y += pcfWidth ){
-			total += getShadowness(vec2(float(x)*u_shadowPCFOffset, float(y)*u_shadowPCFOffset) + dither);
-			//total += getShadowness(vec2(float(x)*u_shadowPCFOffset, float(y)*u_shadowPCFOffset)); // orig
-		}
-	}
-
-	total /= float(totalTexels);
-	return total;
+	return (//getShadowness(vec2(0,0)) +
+			getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset)) +
+			getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset)) +
+			getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset)) +
+			getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset))) * 0.25;
 }
 
 #endif
