@@ -4,7 +4,7 @@
 	uniform float u_shadowPCFOffset;
 	varying vec3 v_shadowMapUv;
 
-	// Antz new
+	// Antz: ivec2(pcfCount, pcfDither)
 	uniform ivec2 u_pcfConfig;
 
 	#ifdef numCSM
