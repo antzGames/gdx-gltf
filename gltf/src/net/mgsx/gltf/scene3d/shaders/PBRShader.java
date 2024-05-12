@@ -7,11 +7,13 @@ import com.badlogic.gdx.graphics.g3d.Attributes;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.IntAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -27,6 +29,7 @@ import net.mgsx.gltf.scene3d.attributes.PBRFloatAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRHDRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRIridescenceAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRShadowsAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRVertexAttributes;
 import net.mgsx.gltf.scene3d.attributes.PBRVolumeAttribute;
@@ -182,6 +185,22 @@ public class PBRShader extends DefaultShader
 			PBRFloatAttribute attribute = combinedAttributes.get(PBRFloatAttribute.class, PBRFloatAttribute.ShadowBias);
 			float value = attribute == null ? 0f : attribute.value;
 			shader.set(inputID, value);
+		}
+	};
+
+	public final static Uniform pcfConfigUniform = new Uniform("u_pcfConfig");
+	public final static Setter pcfConfigSetter = new LocalSetter() {
+		@Override
+		public void set (BaseShader shader, int inputID, Renderable renderable, Attributes combinedAttributes) {
+			PBRShadowsAttribute attribute = combinedAttributes.get(PBRShadowsAttribute.class, PBRShadowsAttribute.PcfConfig);
+			int pcf, dither;
+			if (attribute == null){
+				pcf = 1; dither = 0;
+			} else {
+				pcf = MathUtils.clamp(attribute.pcf, 1,3);
+				dither = MathUtils.clamp(attribute.dither,0,1);  // 0 = off, 1 = fast sin noise dither, 2 = FBM noise (future TODO)
+			}
+			shader.set(inputID, pcf, dither);
 		}
 	};
 
@@ -526,6 +545,9 @@ public class PBRShader extends DefaultShader
 	public int u_csmPCFClip;
 	public int u_csmTransforms;
 
+	// Antz PCF Shadows
+	public int u_pcfConfig;
+
 	private static final Matrix3 textureTransform = new Matrix3();
 	
 	public PBRShader(Renderable renderable, Config config, String prefix) {
@@ -604,6 +626,9 @@ public class PBRShader extends DefaultShader
 		
 		u_viewportInv = register(viewportInvUniform, viewportInvSetter);
 		u_clippingPlane = register(clippingPlaneUniform, clippingPlaneSetter);
+
+		//Antz
+		u_pcfConfig = register(pcfConfigUniform, pcfConfigSetter);
 	}
 
 	private int computeVertexColorLayers(Renderable renderable) {

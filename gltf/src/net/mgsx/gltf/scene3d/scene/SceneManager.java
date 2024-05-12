@@ -22,6 +22,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap.Entry;
 
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRShadowsAttribute;
 import net.mgsx.gltf.scene3d.lights.DirectionalShadowLight;
 import net.mgsx.gltf.scene3d.lights.PointLightEx;
 import net.mgsx.gltf.scene3d.lights.SpotLightEx;
@@ -57,7 +58,7 @@ public class SceneManager implements Disposable {
 	
 	private PointLightsAttribute pointLights = new PointLightsAttribute();
 	private SpotLightsAttribute spotLights = new SpotLightsAttribute();
-			
+
 
 	public SceneManager() {
 		this(24);
@@ -82,6 +83,7 @@ public class SceneManager implements Disposable {
 		
 		float lum = 1f;
 		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, lum, lum, lum, 1));
+		environment.set(new PBRShadowsAttribute(PBRShadowsAttribute.PcfConfig,1,0));
 	}
 	
 	public void setEnvironmentRotation(float azymuthAngleDegree){
