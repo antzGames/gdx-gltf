@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.g3d.Attributes;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.IntAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader;
@@ -29,7 +28,7 @@ import net.mgsx.gltf.scene3d.attributes.PBRFloatAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRHDRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRIridescenceAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
-import net.mgsx.gltf.scene3d.attributes.PBRShadowsAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRPercentageCloserFilteringAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRVertexAttributes;
 import net.mgsx.gltf.scene3d.attributes.PBRVolumeAttribute;
@@ -192,7 +191,7 @@ public class PBRShader extends DefaultShader
 	public final static Setter pcfConfigSetter = new LocalSetter() {
 		@Override
 		public void set (BaseShader shader, int inputID, Renderable renderable, Attributes combinedAttributes) {
-			PBRShadowsAttribute attribute = combinedAttributes.get(PBRShadowsAttribute.class, PBRShadowsAttribute.PcfConfig);
+			PBRPercentageCloserFilteringAttribute attribute = combinedAttributes.get(PBRPercentageCloserFilteringAttribute.class, PBRPercentageCloserFilteringAttribute.PcfConfig);
 			int pcf, dither;
 			if (attribute == null){
 				pcf = 1; dither = 0;

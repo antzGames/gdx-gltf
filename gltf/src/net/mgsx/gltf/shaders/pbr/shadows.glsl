@@ -70,19 +70,19 @@
 
 	#else
 
-		float random(vec2 st) {
-			return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-		}
-
-//		highp float rand(vec2 co)
-//		{
-//			highp float a = 12.9898;
-//			highp float b = 78.233;
-//			highp float c = 43758.5453;
-//			highp float dt= dot(co.xy ,vec2(a,b));
-//			highp float sn= mod(dt,3.14);
-//			return fract(sin(sn) * c);
+//		float random(vec2 st) {
+//			return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 //		}
+
+		highp float random(vec2 co)
+		{
+			highp float a = 12.9898;
+			highp float b = 78.233;
+			highp float c = 43758.5453;
+			highp float dt= dot(co.xy ,vec2(a,b));
+			highp float sn= mod(dt,3.14);
+			return fract(sin(sn) * c);
+		}
 
 		float getShadowness(vec2 offset)
 		{
@@ -92,17 +92,20 @@
 
 		float getShadow()
 		{
-			int pcfCount = u_pcfConfig.x; // PCF level x level
+			int pcfCount = u_pcfConfig.x; // PCF (pcfCount x pcfCount)
 			int isDither = u_pcfConfig.y; // 0 = default gdx-gltf, 1 = fast sin hash
 
 			float total = 0.0;
 			vec2 dither = vec2(0.0);
 
+			// Do dither if set
 			if (isDither == 1){
-				float rand = random(v_shadowMapUv.xy);
+				// Note: sin hash function needs big seeds (numbers) for best results
+				float rand = random(v_shadowMapUv.xy / u_shadowPCFOffset);
 				dither = vec2(rand,rand) * 2.0 * u_shadowPCFOffset;
 			}
 
+			// PCF (1x1) is basically the original default for gdx-gltf
 			if (pcfCount == 1){
 				total =
 				getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither) +
@@ -117,10 +120,10 @@
 				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 
-				getShadowness(vec2(2.0 * u_shadowPCFOffset, 2.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * -u_shadowPCFOffset, 2.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * u_shadowPCFOffset, 2.0 * -u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * -u_shadowPCFOffset, 2.0 * -u_shadowPCFOffset) + dither);
+				getShadowness((vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(-u_shadowPCFOffset,-u_shadowPCFOffset) + dither)* 2.0);
 				total /= 8.0;
 			} else if (pcfCount == 3) {
 				total =
@@ -129,15 +132,15 @@
 				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 
-				getShadowness(vec2(2.0 * u_shadowPCFOffset, 2.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * -u_shadowPCFOffset, 2.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * u_shadowPCFOffset, 2.0 * -u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(2.0 * -u_shadowPCFOffset, 2.0 * -u_shadowPCFOffset) + dither) +
+				getShadowness((vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither)* 2.0) +
+				getShadowness((vec2(-u_shadowPCFOffset,-u_shadowPCFOffset) + dither)* 2.0) +
 
-				getShadowness(vec2(3.0 * u_shadowPCFOffset, 3.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(3.0 * -u_shadowPCFOffset, 3.0 * u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(3.0 * u_shadowPCFOffset, 3.0 * -u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(3.0 * -u_shadowPCFOffset, 3.0 * -u_shadowPCFOffset) + dither);
+				getShadowness((vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 3.0) +
+				getShadowness((vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither)* 3.0) +
+				getShadowness((vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither)* 3.0) +
+				getShadowness((vec2(-u_shadowPCFOffset,-u_shadowPCFOffset) + dither)* 3.0);
 				total /= 12.0;
 			}
 
