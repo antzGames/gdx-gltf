@@ -102,7 +102,8 @@
 			if (isDither == 1){
 				// Note: sin hash function needs big seeds (numbers) for best results
 				float rand = random(v_shadowMapUv.xy / u_shadowPCFOffset);
-				dither = vec2(rand,rand) * 2.0 * u_shadowPCFOffset;
+				//dither = vec2(rand,rand) * 2.0 * u_shadowPCFOffset;  // fast but squarish
+				dither = vec2(sqrt(rand)*cos(6.28318 * rand), sqrt(rand)*sin(6.28318 * rand)) * 2.0 * u_shadowPCFOffset; // rounder shadows
 			}
 
 			// PCF (1x1) is basically the original default for gdx-gltf
@@ -120,10 +121,10 @@
 				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 
-				getShadowness(vec2(u_shadowPCFOffset* 2.0, u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset* 2.0, u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset* 2.0, -u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset* 2.0,-u_shadowPCFOffset* 2.0) + dither);
+				getShadowness(vec2(u_shadowPCFOffset * 0.5, u_shadowPCFOffset * 2.0) + dither) +
+				getShadowness(vec2(-u_shadowPCFOffset * 2.0, u_shadowPCFOffset * 0.5) + dither) +
+				getShadowness(vec2(u_shadowPCFOffset * 0.5, -u_shadowPCFOffset * 2.0) + dither) +
+				getShadowness(vec2(u_shadowPCFOffset * 2.0,u_shadowPCFOffset * 0.5) + dither);
 				total /= 8.0;
 			} else if (pcfCount == 3) {
 				total =
@@ -132,10 +133,10 @@
 				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
 
-				getShadowness(vec2(u_shadowPCFOffset* 2.0, u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset* 2.0, u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset* 2.0, -u_shadowPCFOffset* 2.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset* 2.0,-u_shadowPCFOffset* 2.0) + dither) +
+				getShadowness(vec2(u_shadowPCFOffset * 0.5, u_shadowPCFOffset * 2.0) + dither) +
+				getShadowness(vec2(-u_shadowPCFOffset * 2.0, u_shadowPCFOffset * 0.5) + dither) +
+				getShadowness(vec2(u_shadowPCFOffset * 0.5, -u_shadowPCFOffset * 2.0) + dither) +
+				getShadowness(vec2(u_shadowPCFOffset * 2.0,u_shadowPCFOffset * 0.5) + dither) +
 
 				getShadowness(vec2(u_shadowPCFOffset* 3.0, u_shadowPCFOffset* 3.0) + dither) +
 				getShadowness(vec2(-u_shadowPCFOffset* 3.0, u_shadowPCFOffset* 3.0) + dither) +
