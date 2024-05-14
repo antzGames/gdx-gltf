@@ -197,7 +197,7 @@ public class PBRShader extends DefaultShader
 				pcf = 1; dither = 0;
 			} else {
 				pcf = MathUtils.clamp(attribute.pcf, 1,3);
-				dither = MathUtils.clamp(attribute.dither,0,1);  // 0 = off, 1 = fast sin noise dither, 2 = FBM noise (future TODO)
+				dither = MathUtils.clamp(attribute.dither,0,1);  // 0 = off, 1 = fast noise dither
 			}
 			shader.set(inputID, pcf, dither);
 		}
