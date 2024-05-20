@@ -28,7 +28,7 @@ import net.mgsx.gltf.scene3d.attributes.PBRFloatAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRHDRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRIridescenceAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
-import net.mgsx.gltf.scene3d.attributes.PBRPercentageCloserFilteringAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRAdvancedShadowsAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRVertexAttributes;
 import net.mgsx.gltf.scene3d.attributes.PBRVolumeAttribute;
@@ -187,19 +187,20 @@ public class PBRShader extends DefaultShader
 		}
 	};
 
-	public final static Uniform pcfConfigUniform = new Uniform("u_pcfConfig");
-	public final static Setter pcfConfigSetter = new LocalSetter() {
+	public final static Uniform advancedShadowsUniform = new Uniform("u_advancedShadowsConfig");
+	public final static Setter advancedShadowsConfigSetter = new LocalSetter() {
 		@Override
 		public void set (BaseShader shader, int inputID, Renderable renderable, Attributes combinedAttributes) {
-			PBRPercentageCloserFilteringAttribute attribute = combinedAttributes.get(PBRPercentageCloserFilteringAttribute.class, PBRPercentageCloserFilteringAttribute.PcfConfig);
-			int pcf, dither;
+			PBRAdvancedShadowsAttribute attribute = combinedAttributes.get(PBRAdvancedShadowsAttribute.class, PBRAdvancedShadowsAttribute.AdvancedShadowsConfig);
+			int pcf, dither, normalBiasInv;
 			if (attribute == null){
-				pcf = 1; dither = 0;
+				pcf = 1; dither = 0; normalBiasInv = 0; // These values will behave like original gdx-gltf
 			} else {
 				pcf = MathUtils.clamp(attribute.pcf, 1,3);
 				dither = MathUtils.clamp(attribute.dither,0,1);  // 0 = off, 1 = fast noise dither
+				normalBiasInv = MathUtils.clamp(attribute.normalBiasInv,0,4096);
 			}
-			shader.set(inputID, pcf, dither);
+			shader.set(inputID, pcf, dither, normalBiasInv);
 		}
 	};
 
@@ -545,7 +546,7 @@ public class PBRShader extends DefaultShader
 	public int u_csmTransforms;
 
 	// Antz PCF Shadows
-	public int u_pcfConfig;
+	public int u_AdvanceShadowsConfig;
 
 	private static final Matrix3 textureTransform = new Matrix3();
 	
@@ -627,7 +628,7 @@ public class PBRShader extends DefaultShader
 		u_clippingPlane = register(clippingPlaneUniform, clippingPlaneSetter);
 
 		//Antz
-		u_pcfConfig = register(pcfConfigUniform, pcfConfigSetter);
+		u_AdvanceShadowsConfig = register(advancedShadowsUniform, advancedShadowsConfigSetter);
 	}
 
 	private int computeVertexColorLayers(Renderable renderable) {

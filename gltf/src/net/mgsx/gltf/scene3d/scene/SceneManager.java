@@ -22,7 +22,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap.Entry;
 
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
-import net.mgsx.gltf.scene3d.attributes.PBRPercentageCloserFilteringAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRAdvancedShadowsAttribute;
 import net.mgsx.gltf.scene3d.lights.DirectionalShadowLight;
 import net.mgsx.gltf.scene3d.lights.PointLightEx;
 import net.mgsx.gltf.scene3d.lights.SpotLightEx;
@@ -83,7 +83,7 @@ public class SceneManager implements Disposable {
 		
 		float lum = 1f;
 		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, lum, lum, lum, 1));
-		environment.set(new PBRPercentageCloserFilteringAttribute(PBRPercentageCloserFilteringAttribute.PcfConfig,1,0));
+		environment.set(new PBRAdvancedShadowsAttribute(PBRAdvancedShadowsAttribute.AdvancedShadowsConfig,1,0, 0));
 	}
 	
 	public void setEnvironmentRotation(float azymuthAngleDegree){

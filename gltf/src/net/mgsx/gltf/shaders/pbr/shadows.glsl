@@ -5,7 +5,7 @@
 	varying vec3 v_shadowMapUv;
 
 	// Antz: ivec2(pcfCount, pcfDither)
-	uniform ivec2 u_pcfConfig;
+	uniform ivec3 u_advancedShadowsConfig;
 
 	#ifdef numCSM
 
@@ -70,6 +70,7 @@
 
 	#else
 
+		// Internet recommends not to use this
 //		float random(vec2 st) {
 //			return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 //		}
@@ -84,21 +85,31 @@
 			return fract(sin(sn) * c);
 		}
 
-		float getShadowness(vec2 offset)
+		float getShadowness(vec2 offset, vec3 normal_bias)
 		{
+			offset += vec2(normal_bias.x, normal_bias.y);
 			const vec4 bitShifts = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
-			return step(v_shadowMapUv.z, dot(texture2D(u_shadowTexture, v_shadowMapUv.xy + offset), bitShifts) + u_shadowBias); // (1.0/255.0)
+			return step(v_shadowMapUv.z + normal_bias.z, dot(texture2D(u_shadowTexture, v_shadowMapUv.xy + offset), bitShifts) + u_shadowBias); // (1.0/255.0)
 		}
 
 		float getShadow()
 		{
-			int pcfCount = u_pcfConfig.x; // PCF (pcfCount x pcfCount)
-			int isDither = u_pcfConfig.y; // 0 = default gdx-gltf, 1 = fast sin hash
+			// get values from u_advancedShadowsConfig uniform
+			int pcfCount = u_advancedShadowsConfig.x; // PCF 1 == gdx-gltf default, 2 == 8 samples, 3 == 12 samples
+			int isDither = u_advancedShadowsConfig.y; // 0 == default gdx-gltf, 1 == fast sin hash
+			int normalBiasInverse = u_advancedShadowsConfig.z; // 0 == no normal bias
 
+			// set default values to zero
 			float total = 0.0;
 			vec2 dither = vec2(0.0);
+			vec3 normal_bias = vec3(0.0);
 
-			// Do dither if set
+			// if normal bias is not 0 then scale the normal bias variable
+			if (normalBiasInverse != 0) {
+				normal_bias = getNormal() * (1.0 / float(normalBiasInverse));
+			}
+
+			// Calculate dither if set
 			if (isDither == 1){
 				// Note: sin hash function needs big seeds (numbers) for best results
 				float rand = random(v_shadowMapUv.xy / u_shadowPCFOffset);
@@ -115,11 +126,12 @@
 			    ----------- */
 
 				total =
-				getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither);
+					getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither, normal_bias);
 				total /= 4.0;
+
 			} else if (pcfCount == 2) {
 
 				/*-----------
@@ -131,16 +143,17 @@
 			    ------------- */
 
 				total =
-				getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither) +
+					getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) + dither, normal_bias) +
 
-				getShadowness(vec2(0.0, u_shadowPCFOffset * 2.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset * 2.0, 0.0) + dither) +
-				getShadowness(vec2(0.0, -u_shadowPCFOffset * 2.0) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset * 2.0,0.0) + dither);
+					getShadowness(vec2(0.0, u_shadowPCFOffset * 2.0) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset * 2.0, 0.0) + dither, normal_bias) +
+					getShadowness(vec2(0.0, -u_shadowPCFOffset * 2.0) + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset * 2.0,0.0) + dither, normal_bias);
 				total /= 8.0;
+
 			} else if (pcfCount == 3) {
 
 				/*------------
@@ -154,20 +167,20 @@
 			    ------------- */
 
 				total =
-				getShadowness(vec2(0.0, u_shadowPCFOffset) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, 0.0) + dither) +
-				getShadowness(vec2(0.0, -u_shadowPCFOffset ) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset, 0.0) + dither) +
+					getShadowness(vec2(0.0, u_shadowPCFOffset) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, 0.0) + dither, normal_bias) +
+					getShadowness(vec2(0.0, -u_shadowPCFOffset ) + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset, 0.0) + dither, normal_bias) +
 
-				getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) * 2.0 + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) * 2.0 + dither) +
-				getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) * 2.0 + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) * 2.0 + dither) +
+					getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset) * 2.0 + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset) * 2.0 + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset) * 2.0 + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset) * 2.0 + dither, normal_bias) +
 
-				getShadowness(vec2(0.0, u_shadowPCFOffset * 3.0) + dither) +
-				getShadowness(vec2(-u_shadowPCFOffset * 3.0, 0.0) + dither) +
-				getShadowness(vec2(0.0, -u_shadowPCFOffset * 3.0) + dither) +
-				getShadowness(vec2(u_shadowPCFOffset * 3.0, 0.0) + dither);
+					getShadowness(vec2(0.0, u_shadowPCFOffset * 3.0) + dither, normal_bias) +
+					getShadowness(vec2(-u_shadowPCFOffset * 3.0, 0.0) + dither, normal_bias) +
+					getShadowness(vec2(0.0, -u_shadowPCFOffset * 3.0) + dither, normal_bias) +
+					getShadowness(vec2(u_shadowPCFOffset * 3.0, 0.0) + dither, normal_bias);
 				total /= 12.0;
 			}
 
