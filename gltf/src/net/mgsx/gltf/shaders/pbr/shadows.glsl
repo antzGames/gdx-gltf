@@ -3,32 +3,35 @@
 	uniform sampler2D u_shadowTexture;
 	uniform float u_shadowPCFOffset;
 	varying vec3 v_shadowMapUv;
-
 	// Antz: ivec3(pcfCount, pcfDither, normalBiasInverse)
 	uniform ivec3 u_advancedShadowsConfig;
 
-	// another popular sin based hash, less precision
-//		float random(vec2 st) {
-//			return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-//		}
+highp float random(vec2 co) {
+	highp float a = 12.9898;
+	highp float b = 78.233;
+	highp float c = 43758.5453;
+	highp float dt = dot(co.xy, vec2(a, b));
+	highp float sn = mod(dt, 3.14);
+	return fract(sin(sn) * c);
+}
 
-	highp float random(vec2 co)
-	{
-		highp float a = 12.9898;
-		highp float b = 78.233;
-		highp float c = 43758.5453;
-		highp float dt= dot(co.xy ,vec2(a,b));
-		highp float sn= mod(dt,3.14);
-		return fract(sin(sn) * c);
-	}
+#ifdef numCSM
 
-	#ifdef numCSM
-		uniform sampler2D u_csmSamplers[numCSM];
-		uniform vec2 u_csmPCFClip[numCSM];
-		varying vec3 v_csmUVs[numCSM];
+// arrays of samplers don't seem to work well with ANGLE/DXD11 on Windows so use invididual uniforms instead
+uniform sampler2D u_csmSamplers0;
+uniform sampler2D u_csmSamplers1;
+uniform sampler2D u_csmSamplers2;
+uniform sampler2D u_csmSamplers3;
+uniform sampler2D u_csmSamplers4;
+uniform sampler2D u_csmSamplers5;
+uniform sampler2D u_csmSamplers6;
+uniform sampler2D u_csmSamplers7;
+uniform vec2 u_csmPCFClip[numCSM];
+varying vec3 v_csmUVs[numCSM];
 
-		float getCSMShadowness(sampler2D sampler, vec3 uv, vec2 offset, vec3 normal_bias)
-		{
+
+
+		float getCSMShadowness(sampler2D sampler, vec3 uv, vec2 offset, vec3 normal_bias) {
 			offset += vec2(normal_bias.x, normal_bias.y);
 			const vec4 bitShifts = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
 			return step(uv.z + normal_bias.z, dot(texture2D(sampler, uv.xy + offset), bitShifts) + u_shadowBias); // (1.0/255.0)
@@ -101,8 +104,7 @@
 			}
 		}
 
-		float getShadow()
-		{
+		float getShadow() {
 			// get values from u_advancedShadowsConfig uniform
 			int pcfCount = u_advancedShadowsConfig.x; // PCF 1 == gdx-gltf default, 2 == 8 samples, 3 == 12 samples
 			int isDither = u_advancedShadowsConfig.y; // 0 == default gdx-gltf, 1 == fast sin hash
@@ -126,30 +128,29 @@
 					}
 
 					#if numCSM > 0
-					if(i == 0) return getCSMShadow(u_csmSamplers[0], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 0) return getCSMShadow(u_csmSamplers0, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 1
-					if(i == 1) return getCSMShadow(u_csmSamplers[1], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 1) return getCSMShadow(u_csmSamplers1, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 2
-					if(i == 2) return getCSMShadow(u_csmSamplers[2], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 2) return getCSMShadow(u_csmSamplers2, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 3
-					if(i == 3) return getCSMShadow(u_csmSamplers[3], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 3) return getCSMShadow(u_csmSamplers3, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 4
-					if(i == 4) return getCSMShadow(u_csmSamplers[4], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 4) return getCSMShadow(u_csmSamplers4, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 5
-					if(i == 5) return getCSMShadow(u_csmSamplers[5], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 5) return getCSMShadow(u_csmSamplers5, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 6
-					if(i == 6) return getCSMShadow(u_csmSamplers[6], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 6) return getCSMShadow(u_csmSamplers6, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
 					#if numCSM > 7
-					if(i == 7) return getCSMShadow(u_csmSamplers[7], uv, pcf, normal_bias, isDither, pcfCount);
+					if(i == 7) return getCSMShadow(u_csmSamplers7, uv, pcf, normal_bias, isDither, pcfCount);
 					#endif
-
 				}
 			}
 			// default map
@@ -158,15 +159,13 @@
 
 	#else
 
-		float getShadowness(vec2 offset, vec3 normal_bias)
-		{
+		float getShadowness(vec2 offset, vec3 normal_bias) {
 			offset += vec2(normal_bias.x, normal_bias.y);
 			const vec4 bitShifts = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
 			return step(v_shadowMapUv.z + normal_bias.z, dot(texture2D(u_shadowTexture, v_shadowMapUv.xy + offset), bitShifts) + u_shadowBias); // (1.0/255.0)
 		}
 
-		float getShadow()
-		{
+		float getShadow() {
 			// get values from u_advancedShadowsConfig uniform
 			int pcfCount = u_advancedShadowsConfig.x; // PCF 1 == gdx-gltf default, 2 == 8 samples, 3 == 12 samples
 			int isDither = u_advancedShadowsConfig.y; // 0 == default gdx-gltf, 1 == fast sin hash
@@ -261,5 +260,4 @@
 		}
 
 	#endif
-
 #endif //shadowMapFlag

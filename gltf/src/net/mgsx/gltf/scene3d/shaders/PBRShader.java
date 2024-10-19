@@ -22,13 +22,13 @@ import net.mgsx.gltf.scene3d.attributes.CascadeShadowMapAttribute;
 import net.mgsx.gltf.scene3d.attributes.ClippingPlaneAttribute;
 import net.mgsx.gltf.scene3d.attributes.FogAttribute;
 import net.mgsx.gltf.scene3d.attributes.MirrorSourceAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRAdvancedShadowsAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRCubemapAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRFloatAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRHDRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRIridescenceAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRMatrixAttribute;
-import net.mgsx.gltf.scene3d.attributes.PBRAdvancedShadowsAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRVertexAttributes;
 import net.mgsx.gltf.scene3d.attributes.PBRVolumeAttribute;
@@ -203,6 +203,7 @@ public class PBRShader extends DefaultShader
 			shader.set(inputID, pcf, dither, normalBiasInv);
 		}
 	};
+
 
 	public final static Uniform fogEquationUniform = new Uniform("u_fogEquation");
 	public final static Setter fogEquationSetter = new LocalSetter() {
@@ -504,6 +505,8 @@ public class PBRShader extends DefaultShader
 	
 	private int vertexColorLayers;
 
+	private int cascadeCount;
+
 	public int u_emissive;
 
 	public int u_transmissionFactor;
@@ -540,10 +543,13 @@ public class PBRShader extends DefaultShader
 
 	public int u_viewportInv;
 	public int u_clippingPlane;
-	
-	public int u_csmSamplers;
+
+	public int [] u_csmSamplers;
 	public int u_csmPCFClip;
 	public int u_csmTransforms;
+
+	private float [] csmTransforms;
+	private float [] csmPCFClip;
 
 	// Antz PCF Shadows
 	public int u_AdvanceShadowsConfig;
@@ -558,6 +564,12 @@ public class PBRShader extends DefaultShader
 		morphTargetsMask = computeMorphTargetsMask(renderable);
 		
 		vertexColorLayers = computeVertexColorLayers(renderable);
+
+		cascadeCount = countShadowCascades(renderable);
+
+		u_csmSamplers = new int[cascadeCount];
+		csmTransforms = new float[cascadeCount * 16];
+		csmPCFClip = new float[cascadeCount * 2];
 		
 		// base color
 		u_BaseColorTexture = register(baseColorTextureUniform, baseColorTextureSetter);
@@ -642,6 +654,14 @@ public class PBRShader extends DefaultShader
 		return num;
 	}
 
+	private int countShadowCascades(Renderable renderable ){
+		if(renderable.environment != null) {
+			CascadeShadowMapAttribute csm = renderable.environment.get(CascadeShadowMapAttribute.class, CascadeShadowMapAttribute.Type);
+			if(csm != null) return csm.cascadeShadowMap.lights.size;
+		}
+		return 0;
+	}
+
 	@Override
 	public boolean canRender(Renderable renderable) {
 		// TODO properly determine if current shader can render this renderable.
@@ -657,7 +677,10 @@ public class PBRShader extends DefaultShader
 		
 		// compare vertex colors count
 		if(this.vertexColorLayers != computeVertexColorLayers(renderable)) return false;
-		
+
+		// compare number of shadow map cascades
+		if(this.cascadeCount != countShadowCascades(renderable)) return false;
+
 		return super.canRender(renderable);
 	}
 	
@@ -716,10 +739,13 @@ public class PBRShader extends DefaultShader
 		u_morphTargets2 = program.fetchUniformLocation("u_morphTargets2", false);
 		
 		u_ambientLight = program.fetchUniformLocation("u_ambientLight", false);
-		
-		u_csmSamplers = program.fetchUniformLocation("u_csmSamplers", false);
+
 		u_csmPCFClip = program.fetchUniformLocation("u_csmPCFClip", false);
 		u_csmTransforms = program.fetchUniformLocation("u_csmTransforms", false);
+
+		for (int i = 0; i < cascadeCount; i++) {
+			u_csmSamplers[i] = program.fetchUniformLocation("u_csmSamplers" + i, false);
+		}
 	}
 	
 	@Override
@@ -819,7 +845,7 @@ public class PBRShader extends DefaultShader
 		}
 		
 		CascadeShadowMapAttribute csmAttrib = attributes.get(CascadeShadowMapAttribute.class, CascadeShadowMapAttribute.Type);
-		if(csmAttrib != null && u_csmSamplers >= 0){
+		if(csmAttrib != null && u_csmSamplers.length > 0 && u_csmSamplers[0] >= 0){
 			Array<DirectionalShadowLight> lights = csmAttrib.cascadeShadowMap.lights;
 			for(int i=0 ; i<lights.size ; i++){
 				DirectionalShadowLight light = lights.get(i);
@@ -828,10 +854,13 @@ public class PBRShader extends DefaultShader
 				float clip = 3.f / (2 * mapSize);
 				
 				int unit = context.textureBinder.bind(light.getDepthMap());
-				program.setUniformi(u_csmSamplers + i, unit);
-				program.setUniformMatrix(u_csmTransforms + i, light.getProjViewTrans());
-				program.setUniformf(u_csmPCFClip + i, pcf, clip);
+				program.setUniformi(u_csmSamplers[i], unit);
+				System.arraycopy(light.getProjViewTrans().val, 0, csmTransforms, i*16, 16);
+				csmPCFClip[i*2] = pcf;
+				csmPCFClip[i*2+1] = clip;
 			}
+			program.setUniformMatrix4fv(u_csmTransforms, csmTransforms, 0, csmTransforms.length);
+			program.setUniform2fv(u_csmPCFClip, csmPCFClip, 0, csmPCFClip.length); 
 		}
 	}
 	
